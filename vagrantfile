@@ -1,0 +1,95 @@
+# RH294 Ansible Lab - AlmaLinux 9 Edition (WITH ansible-navigator)
+
+VAGRANT_API_VERSION = "2"
+
+CONTROL_HOSTNAME = "control"
+MANAGED_NODES   = %w[node1 node2 node3 node4 node5]
+
+CONTROL_IP_BASE = "192.168.56.10"
+NODE_IP_BASE    = "192.168.56.2"
+
+CONTROL_RAM_MB  = 2048
+NODE_RAM_MB     = 1500
+CONTROL_CPUS    = 2
+NODE_CPUS       = 1
+
+Vagrant.configure(VAGRANT_API_VERSION) do |config|
+  config.vm.box = "almalinux/9"
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.ssh.insert_key = true
+
+  # ---------------- CONTROL NODE ----------------
+  config.vm.define CONTROL_HOSTNAME do |control|
+    control.vm.hostname = CONTROL_HOSTNAME
+    control.vm.network "private_network", ip: CONTROL_IP_BASE
+
+    control.vm.provider "virtualbox" do |vb|
+      vb.name   = "ansible-#{CONTROL_HOSTNAME}"
+      vb.memory = CONTROL_RAM_MB
+      vb.cpus   = CONTROL_CPUS
+    end
+
+    control.vm.provision "shell", inline: <<-SHELL
+      set -e
+
+      sudo dnf -y update
+      sudo dnf -y install git vim python3 podman ansible-core
+
+      sudo useradd -m ansible || true
+      echo "ansible:ansible" | sudo chpasswd
+      echo "ansible ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/ansible
+
+      sudo -u ansible ssh-keygen -t rsa -b 4096 -N "" -f /home/ansible/.ssh/id_rsa
+
+      sudo -u ansible mkdir -p /home/ansible/ansible-lab
+      sudo -u ansible touch /home/ansible/ansible-lab/inventory.ini
+
+      sudo podman pull quay.io/ansible/creator-ee:latest || true
+
+      cat <<EOF | sudo tee /home/ansible/ansible-navigator.yml
+---
+ansible-navigator:
+  execution-environment:
+    enabled: true
+    container-engine: podman
+    image: quay.io/ansible/creator-ee:latest
+    pull:
+      policy: missing
+  inventory:
+    entries:
+      - /home/ansible/ansible-lab/inventory.ini
+EOF
+
+      sudo chown -R ansible:ansible /home/ansible
+    SHELL
+  end
+
+  # ---------------- MANAGED NODES ----------------
+  MANAGED_NODES.each_with_index do |name, index|
+    config.vm.define name do |node|
+      node.vm.hostname = name
+      node.vm.network "private_network", ip: "#{NODE_IP_BASE}#{index + 1}"
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.name   = "ansible-#{name}"
+        vb.memory = NODE_RAM_MB
+        vb.cpus   = NODE_CPUS
+      end
+
+      node.vm.provision "shell", inline: <<-SHELL
+        set -e
+
+        sudo dnf -y update
+        sudo dnf -y install python3
+
+        sudo useradd -m ansible || true
+        echo "ansible:ansible" | sudo chpasswd
+        echo "ansible ALL=(ALL) NOPASSWD: ALL" | sudo tee /etc/sudoers.d/ansible
+
+        sudo sed -i 's/^PasswordAuthentication no/PasswordAuthentication yes/' /etc/ssh/sshd_config || true
+        sudo systemctl restart sshd || true
+      SHELL
+    end
+  end
+end
+

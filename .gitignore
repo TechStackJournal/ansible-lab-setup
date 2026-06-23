@@ -1,0 +1,15 @@
+# Vagrant
+.vagrant/
+
+# Ansible
+*.retry
+.vault_pass
+*.vault_pass
+vault_password_file
+
+# Editor and OS
+*.swp
+*~
+.DS_Store
+__pycache__/
+*.pyc
