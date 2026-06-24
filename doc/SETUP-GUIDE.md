@@ -9,6 +9,7 @@ By the end you will have one Ansible control node and five managed nodes, all ne
 ## Table of contents
 
 1. [Prerequisites and system requirements](#1-prerequisites-and-system-requirements)
+   - [1a. Low-RAM profiles](#1a-low-ram-profiles)
 2. [Install VirtualBox and the Extension Pack](#2-install-virtualbox-and-the-extension-pack)
 3. [Install Vagrant](#3-install-vagrant)
 4. [Enable virtualisation in BIOS/UEFI](#4-enable-virtualisation-in-biosuefi)
@@ -30,12 +31,71 @@ Before you begin, confirm your machine meets these requirements:
 | Item | Minimum | Recommended |
 |------|---------|-------------|
 | OS | Windows 10 64-bit | Windows 11 64-bit |
-| RAM | 16 GB | 24 GB or more |
+| RAM | 8 GB (with reduced VM sizes — see below) | 16 GB or more |
 | Disk | 25 GB free | 40 GB free (SSD preferred) |
 | CPU | Intel/AMD with VT-x or AMD-V | Any modern multi-core |
 | Internet | Required for first run | Broadband (box download ~1 GB) |
 
-> **Note on RAM:** All 6 VMs together use approximately 9.5 GB RAM (2 GB for control + 5 × 1.5 GB for nodes). Windows itself needs 4–6 GB. 16 GB total is workable; 8 GB will struggle.
+> **Note on RAM:** The default Vagrantfile allocates 2 GB to the control node and 1.5 GB to each managed node — approximately 9.5 GB total for all 6 VMs. Windows itself needs 4–6 GB on top of that, so 16 GB is the comfortable default. If your machine has less RAM, see the low-RAM profiles in [Section 1a](#1a-low-ram-profiles) below before running `vagrant up`.
+
+---
+
+## 1a. Low-RAM profiles
+
+If your machine has 8 GB or less of total RAM, reduce the VM sizes by editing the constants at the top of the `Vagrantfile` **before** running `vagrant up`. The managed nodes only run Python — they do not need much memory.
+
+Open `Vagrantfile` in any text editor and replace the four resource constants with one of the profiles below.
+
+### Profile A — 8 GB host (tight but usable)
+
+```ruby
+CONTROL_RAM_MB  = 1024
+NODE_RAM_MB     = 512
+CONTROL_CPUS    = 2
+NODE_CPUS       = 1
+```
+
+Total VM RAM: 1024 + (5 × 512) = **3.6 GB** — leaves enough headroom for Windows on an 8 GB machine.
+
+> **Trade-off:** `ansible-navigator` and Podman will be slower to start on 1 GB. If navigator feels sluggish, run playbooks directly with `ansible-playbook` instead during practice sessions.
+
+### Profile B — Very constrained (4–6 GB host, survival mode)
+
+```ruby
+CONTROL_RAM_MB  = 512
+NODE_RAM_MB     = 512
+CONTROL_CPUS    = 1
+NODE_CPUS       = 1
+```
+
+Total VM RAM: 512 + (5 × 512) = **3 GB** — absolute minimum. At this level, start only the VMs you are actively using:
+
+```powershell
+# Start control + only the nodes you need right now
+vagrant up control node1 node2
+```
+
+Bring up additional nodes only when a specific exercise requires them:
+
+```powershell
+vagrant up node3
+```
+
+Suspend nodes that are idle to reclaim RAM:
+
+```powershell
+vagrant suspend node4 node5
+```
+
+### Applying changes to already-running VMs
+
+If the VMs are already running when you edit the constants, apply the new hardware settings with:
+
+```powershell
+vagrant reload
+```
+
+If the VMs have not been created yet, `vagrant up` will pick up the new values automatically.
 
 ---
 
