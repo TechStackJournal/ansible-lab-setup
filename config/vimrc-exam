@@ -1,0 +1,38 @@
+" ============================================================
+" .vimrc-exam — Minimal exam-safe Vim config for EX294 / RH294
+" Plugin-free. Built-in settings only.
+" Place at: ~/.vimrc on the exam control node
+" ============================================================
+
+" --- Syntax and filetype ---
+syntax on                        " Syntax highlighting for YAML keys, values, comments
+filetype plugin indent on        " Filetype detection + built-in indent rules
+
+" --- YAML-specific settings (only applied to .yml / .yaml files) ---
+autocmd FileType yaml setlocal ai et sw=2 ts=2 sts=2 number cursorcolumn
+" ai  (autoindent)    — new line inherits current indentation level
+" et  (expandtab)     — Tab key inserts spaces, never a tab character (required for valid YAML)
+" sw=2 (shiftwidth)   — >> and << indent/dedent by 2 spaces
+" ts=2 (tabstop)      — existing tab characters display as 2 spaces wide
+" sts=2 (softtabstop) — Tab and Backspace behave as 2-space soft tabs
+" number              — show line numbers
+" cursorcolumn        — highlight the current column (spot misaligned indentation at a glance)
+
+" --- Folding ---
+set foldlevelstart=20            " All folds open by default when a file is opened
+
+" --- Paste mode toggle ---
+set pastetoggle=<F2>p
+" Press F2 then p to enter paste mode before pasting a YAML block
+" Press F2 then p again to exit paste mode
+" Prevents stair-step auto-indent when pasting multi-line content
+
+" ============================================================
+" Exam tips
+" ============================================================
+" - Use 2-space indentation everywhere — YAML is whitespace-sensitive
+" - Always toggle paste mode (F2 p) before pasting large blocks
+" - cursorcolumn helps you visually verify vertical alignment
+" - No plugins, no external scripts — all settings above are built-in
+" - gg=G re-indents the entire file if indentation gets mangled
+" ============================================================
